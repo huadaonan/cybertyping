@@ -23,6 +23,7 @@ export function mountSurrounding(root, playerId, { single = false, showHands = t
     catch { storageFailed = true; }
   };
   const go = (lesson, phase) => {
+    const enteringLesson = lesson !== progress.lesson || progress.phase < 0 || progress.phase > 2;
     reactions.clear();
     progress = { ...progress, lesson, phase };
     session = startSession(lesson, phase);
@@ -31,7 +32,7 @@ export function mountSurrounding(root, playerId, { single = false, showHands = t
     feedback = phase === 1 ? '认识新键了！现在跟着提示练一小段。' : phase === 2 ? '现在自己试试，找不到时可以点“提示”。' : '慢慢来，先按准就很好。';
     save();
     render();
-    if (phase <= 0) root.closest('.intro-course').scrollIntoView({ block: 'start' });
+    if (phase < 0 || (phase === 0 && enteringLesson)) root.closest('.intro-course').scrollIntoView({ block: 'start' });
     root.focus({ preventScroll: true });
   };
 
@@ -55,6 +56,7 @@ export function mountSurrounding(root, playerId, { single = false, showHands = t
       <div class="intro-complete surround-summary"><p class="intro-eyebrow">${completed === curriculum.length ? `${curriculum.length} 节短课都完成了` : `第 ${progress.lesson + 1} 课完成`}</p><h2>又记住了一组新键！</h2><p>${lesson.name} · ${lesson.areas.flatMap(area => area.keys.map(({ key }) => display(key))).join(' / ')}</p><div class="surround-score"><strong>${Math.round(progress.results[progress.lesson].correct / INDEPENDENT_TARGETS * 100)}<small>%</small></strong><span>自己试试 · 首次按对率</span></div><p>${progress.results[progress.lesson].correct / INDEPENDENT_TARGETS >= MASTERY_ACCURACY ? '按得很稳，继续保持这个节奏。' : '这一课完成了！再练一次，会更熟悉。'}</p><p class="intro-note">${INDEPENDENT_TARGETS} 个目标中，${progress.results[progress.lesson].correct} 个第一次就按对。纠正按键不重复加分。</p><div class="surround-summary-actions">${progress.lesson < curriculum.length - 1 ? `<button class="intro-primary" data-lesson="${progress.lesson + 1}">继续下一课 →</button>` : single && completed === curriculum.length ? '<button class="intro-primary" data-action="continue">进入基准键周边键 →</button>' : '<button class="intro-primary" data-action="list">返回课程，看看进步 →</button>'}<button data-lesson="${progress.lesson}">再练一次</button>${progress.lesson < curriculum.length - 1 ? '<button data-action="list">返回课程</button>' : '<a href="#/placement">进入定级赛 →</a>'}</div></div>
     ` : (() => {
       const text = sequence(progress.lesson, progress.phase, curriculum);
+      const preview = progress.phase === 0 ? sequence(progress.lesson, 1, curriculum) : text;
       const key = text[session.index];
       const area = lesson.areas.find(item => item.home === key || item.keys.some(target => target.key === key));
       const target = area.keys.find(item => item.key === key);
@@ -64,7 +66,7 @@ export function mountSurrounding(root, playerId, { single = false, showHands = t
         <ol class="surround-phases" aria-label="本课练习步骤">${['认识新键', '跟着练', '自己试试'].map((name, index) => `<li ${index === progress.phase ? 'aria-current="step"' : ''} class="${index < progress.phase ? 'done' : ''}">${index < progress.phase ? '✓' : index + 1} · ${name}</li>`).join('')}</ol>
         <div class="surround-progress"><progress max="${text.length}" value="${session.index}" aria-label="本步骤完成进度"></progress><span>${session.index} / ${text.length}</span></div>
         <div class="surround-target"><span class="surround-target-label">${progress.phase === 0 ? '认识这个新键' : '现在按'}</span><strong>${display(key)}</strong><p class="intro-instruction">${hint ? target ? `${area.finger}${target.direction}，按 <b>${display(key)}</b>，松开后回到 <b>${display(area.home)}</b>` : `${area.finger}在基准位置轻按 <b>${display(key)}</b>` : '试着自己找到它，慢一点也没关系。'}</p><p class="intro-note">${hint ? '回位是手指回到原处，不需要额外敲一下基准键。' : '需要帮助时，点下面的“提示”。'}</p></div>
-        ${progress.phase > 0 ? `<div class="intro-sequence surround-sequence" aria-label="本步骤练习内容">${[...text].map((ch, index) => `<span class="${index < session.index ? 'done' : index === session.index ? 'current' : ''}">${display(ch)}</span>`).join('')}</div><p class="intro-note">一格一个键，格子之间不用按空格。</p>` : ''}
+        <div class="surround-sequence-slot" ${progress.phase === 0 ? 'aria-hidden="true"' : ''}><div class="intro-sequence surround-sequence" aria-label="本步骤练习内容">${[...preview].map((ch, index) => `<span class="${index < session.index ? 'done' : index === session.index ? 'current' : ''}">${display(ch)}</span>`).join('')}</div><p class="intro-note">一格一个键，格子之间不用按空格。</p></div>
         ${progress.phase === 2 ? '<div class="surround-reaction-slot" data-reaction-slot></div>' : ''}
         <div class="intro-practice surround-practice ${hint ? 'with-hands' : ''}">${hint ? `${keyboard(key, { wrong, home: area.home })}${showHands ? hands() : ''}<p class="intro-note surround-key-legend">亮色是目标键 · 虚线框是基准键 · 按提示使用对应手指</p>` : '<div class="surround-no-hint">你已经认识这些键了，自己试一小段吧。<button data-action="hint">提示</button></div>'}${paused ? '<div class="intro-overlay"><h2>休息一下也很好</h2><button class="intro-primary" data-action="resume">继续练习</button></div>' : ''}</div>
         <p class="intro-feedback" role="status" aria-live="polite">${feedback}</p>

@@ -6,6 +6,12 @@
 @media(max-width:760px){.surround-target{grid-template-columns:34px minmax(0,1fr);gap:2px 8px;padding:6px 0}.surround-target>strong{font-size:25px;min-height:36px}.surround-target .intro-instruction{font-size:13px}.surround-target .intro-note{font-size:10px}.surround-phases{gap:4px}.surround-phases li{font-size:11px}.surround-practice.with-hands{padding-bottom:54px}.surround-sequence span{font-size:14px;padding:3px}.surround-summary-actions{flex-direction:column}}
 .surround-practice.with-hands{padding-bottom:42px}
 
+/* Reserve the guided sequence and instruction space before showing step two. */
+.surround-sequence-slot[aria-hidden="true"]{visibility:hidden}
+.surround-target{min-height:84px}
+@media(min-width:761px) and (max-width:1050px){.surround-target{min-height:100px}}
+@media(max-width:760px){.surround-target{min-height:92px}}
+
 /* Inline, transparent reactions have their own space; nothing overlays the keys. */
 .surround-reaction-slot{height:210px;display:flex;align-items:center;justify-content:center;pointer-events:none}
 .surround-reaction-summary{height:auto}
