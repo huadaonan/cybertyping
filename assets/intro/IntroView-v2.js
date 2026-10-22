@@ -42,14 +42,20 @@ function mountCourse(root, playerId) {
     feedback = '照着提示轻按一次，慢慢来。';
     save(); render(); root.focus({preventScroll:true});
   };
+  // The title, instructions and navigation stay mounted throughout the lesson.
+  root.innerHTML = `<header class="intro-heading"><div><p class="intro-eyebrow">FIRST CONTACT / 指法训练</p><h1>新手入门</h1><p>从坐姿到基准键，再认识周边键，一步一步练习。</p></div><a href="#/">返回首页 ↗</a></header>
+      <div class="intro-layout"><aside class="intro-sidebar"><nav class="intro-steps" aria-label="入门教学步骤">${labels.map((label,i) => `<button data-step="${i}" ${i>state.unlocked?'disabled':''} aria-current="${i===state.step?'step':'false'}"><span>${(i===4?state.surroundingComplete:i<state.unlocked)?'✓':i+1}</span><div><strong>${label}</strong><small>${descriptions[i]}</small></div></button>`).join('')}</nav><div class="intro-sidebar-note"><p>肩膀放松，手腕自然。<br>先按准，再慢慢练熟。</p><a href="#/placement">暂时跳过</a></div></aside><div class="intro-panel"></div></div>`;
   function render() {
     disposeSurrounding?.();
     disposeSurrounding = undefined;
     const key = sequences[state.step]?.[state.index] ?? 'f';
-    root.innerHTML = `<link rel="stylesheet" href="/assets/intro/intro.css"><link rel="stylesheet" href="/assets/intro/surrounding.css">
-      <header class="intro-heading"><div><p class="intro-eyebrow">FIRST CONTACT / 指法训练</p><h1>新手入门</h1><p>从坐姿到基准键，再认识周边键，一步一步练习。</p></div><a href="#/">返回首页 ↗</a></header>
-      <div class="intro-layout"><aside class="intro-sidebar"><nav class="intro-steps" aria-label="入门教学步骤">${labels.map((label,i) => `<button data-step="${i}" ${i>state.unlocked?'disabled':''} aria-current="${i===state.step?'step':'false'}"><span>${(i===4?state.surroundingComplete:i<state.unlocked)?'✓':i+1}</span><div><strong>${label}</strong><small>${descriptions[i]}</small></div></button>`).join('')}</nav><div class="intro-sidebar-note"><p>肩膀放松，手腕自然。<br>先按准，再慢慢练熟。</p><a href="#/placement">暂时跳过</a></div></aside>
-      <div class="intro-panel">${state.step === 0 ? `
+    root.querySelectorAll('[data-step]').forEach(button => {
+      const index = Number(button.dataset.step);
+      button.disabled = index > state.unlocked;
+      button.setAttribute('aria-current', index === state.step ? 'step' : 'false');
+      button.querySelector('span').textContent = (index === 4 ? state.surroundingComplete : index < state.unlocked) ? '✓' : index + 1;
+    });
+    root.querySelector('.intro-panel').innerHTML = `${state.step === 0 ? `
         <h2>先调整好舒服的坐姿</h2><p>调整完成后逐项确认，再开始放置双手。练习间隙也记得活动一下。</p>
         <div class="intro-posture"><svg viewBox="0 0 360 240" role="img" aria-label="坐姿与桌椅位置的侧视示意"><path d="M30 145H320M280 145V230M110 125V195H170M110 195V230M100 195H155" fill="none" stroke="#52737b" stroke-width="6"/><circle cx="145" cy="45" r="22" fill="#00ffcc"/><path d="M140 73L130 135L180 155L180 220H220M140 90L180 125H235" fill="none" stroke="#00ffcc" stroke-width="12" stroke-linecap="round"/><path d="M245 70H310V115H245ZM278 115V142" fill="none" stroke="#b18bfa" stroke-width="4"/><text x="20" y="25" fill="#acc3d2" font-size="14">肩膀放松 · 手腕自然 · 双脚有支撑</text></svg>
         <div>${['肩膀放松，上臂自然靠近身体','手腕与前臂自然成一直线','背部有支撑，双脚平放或使用脚踏','键盘靠近身体，手指自然弯曲'].map((text,i) => `<label><input type="checkbox" data-check="${i}" ${state.checks[i]?'checked':''}>${text}</label>`).join('')}</div></div>
@@ -66,7 +72,7 @@ function mountCourse(root, playerId) {
         <p class="intro-note">请照图摆放手指，按键反馈只确认按下的键。</p>
         <p class="intro-feedback" role="status" aria-live="polite">${feedback}</p>
         <footer class="intro-controls"><button data-action="back">上一步</button><button data-action="${paused?'resume':'pause'}">${paused?'继续练习':'暂停练习'}</button>${handsSwitch(state.hands)}<span>${paused?'已暂停':`等待按 ${display(key)} · ${state.index+1}/${sequences[state.step].length}`}</span></footer>
-      `}</div></div>`;
+      `}`;
     if (state.step >= 4) disposeSurrounding = mountSurrounding(root.querySelector('.surround-course'), playerId, {
       single: state.step === 4,
       showHands: state.hands,
