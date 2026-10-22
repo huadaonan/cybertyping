@@ -9,14 +9,16 @@ export function advance(step, index, event) {
 
 /** Restore only bounded course data; malformed browser data starts a new course. */
 export function restore(raw) {
-  const initial = {step:0,index:0,unlocked:0,checks:[false,false,false,false],hands:true};
+  const initial = {version:2,step:0,index:0,unlocked:0,checks:[false,false,false,false],hands:true,surroundingComplete:false};
   try {
     const saved = JSON.parse(raw);
-    if (!saved || !Number.isInteger(saved.step) || saved.step < 0 || saved.step > 4 ||
-        !Number.isInteger(saved.unlocked) || saved.unlocked < saved.step || saved.unlocked > 4 ||
+    if (!saved || (saved.version !== undefined && saved.version !== 2) ||
+        !Number.isInteger(saved.step) || saved.step < 0 || saved.step > (saved.version === 2 ? 5 : 4) ||
+        !Number.isInteger(saved.unlocked) || saved.unlocked < saved.step || saved.unlocked > (saved.version === 2 ? 5 : 4) ||
         !Number.isInteger(saved.index) || saved.index < 0 || saved.index > (sequences[saved.step]?.length ?? 0) ||
         !Array.isArray(saved.checks) || saved.checks.length !== 4 || !saved.checks.every(v => typeof v === 'boolean') ||
         (saved.step > 0 && !saved.checks.every(Boolean))) return initial;
-    return {...initial, ...saved, hands:saved.hands !== false};
+    return {version:2,step:saved.step + (saved.version !== 2 && saved.step === 4 ? 1 : 0),index:saved.index,
+      unlocked:saved.unlocked + (saved.version !== 2 && saved.unlocked === 4 ? 1 : 0),checks:saved.checks,hands:saved.hands !== false,surroundingComplete:saved.surroundingComplete === true};
   } catch { return initial; }
 }
