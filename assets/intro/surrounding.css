@@ -5,3 +5,20 @@
 .surround-lesson:last-child{grid-column:auto}.surround-lesson:last-child:nth-child(odd){grid-column:1/-1}.surround-heading{gap:10px}.surround-heading h2{font-size:20px;margin-bottom:4px}.surround-heading p{margin:2px 0;font-size:12px}.surround-heading>button{font-size:12px;padding:7px 10px}.surround-start{padding:12px 14px;margin:14px 0 16px}.surround-start p{font-size:13px}.surround-phases{gap:8px;margin:10px 0 8px}.surround-phases li{font-size:12px;padding:7px 5px}.surround-progress{gap:8px;font-size:11px}.surround-target{display:grid;grid-template-columns:42px minmax(0,1fr);gap:2px 12px;align-items:center;text-align:left;max-width:760px;padding:6px 10px;margin:2px auto}.surround-target-label{display:none}.surround-target>strong{grid-row:1/3;display:flex;align-items:center;justify-content:center;min-height:40px;font-size:30px;line-height:1.1;border:1px solid #296357;border-radius:6px;background:#10312c}.surround-target p{margin:0!important}.surround-target .intro-instruction{font-size:16px;line-height:1.45}.surround-target .intro-note{font-size:11px}.surround-sequence{padding:6px;margin:4px 0 0}.surround-sequence span{font-size:16px;padding:3px 4px}.surround-key-legend{position:relative;z-index:2;margin:6px 0 0!important;font-size:11px}.surround-no-hint{min-height:100px;gap:12px}.surround-practice.with-hands{padding-bottom:78px}.surround-summary{padding:24px 8px}
 @media(max-width:760px){.surround-target{grid-template-columns:34px minmax(0,1fr);gap:2px 8px;padding:6px 0}.surround-target>strong{font-size:25px;min-height:36px}.surround-target .intro-instruction{font-size:13px}.surround-target .intro-note{font-size:10px}.surround-phases{gap:4px}.surround-phases li{font-size:11px}.surround-practice.with-hands{padding-bottom:54px}.surround-sequence span{font-size:14px;padding:3px}.surround-summary-actions{flex-direction:column}}
 .surround-practice.with-hands{padding-bottom:42px}
+
+/* Inline, transparent reactions have their own space; nothing overlays the keys. */
+.surround-reaction-slot{height:210px;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.surround-reaction-summary{height:auto}
+.surround-reaction{display:flex;flex-direction:column;align-items:center;gap:8px;max-width:100%;padding:8px 0;border:0;background:transparent;box-shadow:none;pointer-events:none;font-family:inherit}
+.surround-reaction[hidden]{display:none}
+.surround-reaction strong{color:#91ffe0;font-size:clamp(19px,3vw,28px);font-weight:800;white-space:nowrap;line-height:1.4}
+.surround-reaction.retry strong{color:#ffe0a0}
+.surround-reaction-art{display:block;position:relative;overflow:hidden;width:160px;height:160px}
+.surround-reaction-art img{position:absolute;inset:0;display:block;width:200%;height:100%;max-width:none}
+.surround-reaction.correct.is-reacting .surround-reaction-art{animation:surround-sword-raise .55s ease-in-out infinite alternate}
+.surround-reaction.retry.is-reacting .surround-reaction-art{animation:surround-link-cheer .35s ease-in-out infinite alternate}
+.surround-reaction.retry .surround-reaction-art img{left:-100%}
+@keyframes surround-sword-raise{from{transform:translateY(4px) rotate(-3deg)}to{transform:translateY(-7px) rotate(3deg)}}
+@keyframes surround-link-cheer{from{transform:translateY(3px) rotate(-4deg)}to{transform:translateY(-5px) rotate(4deg)}}
+@media(max-width:650px){.surround-reaction-slot{height:178px}.surround-reaction-summary{height:auto}.surround-reaction-art{width:132px;height:132px}}
+@media(prefers-reduced-motion:reduce){.surround-reaction,.surround-reaction.correct.is-reacting .surround-reaction-art,.surround-reaction.retry.is-reacting .surround-reaction-art{animation:none}}

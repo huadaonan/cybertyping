@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { lessons, singleLessons, sequence, startSession, typeKey, restoreProgress, completeLesson } from './surrounding.js';
+import { lessons, singleLessons, sequence, startSession, typeKey, firstAttemptFeedback, restoreProgress, completeLesson } from './surrounding.js';
 
 test('ten introductory lessons train one hand at a time before the paired course', () => {
   assert.deepEqual(singleLessons.map(lesson => lesson.areas.map(area => area.home)), [['f'], ['j'], ['d'], ['k'], ['s'], ['l'], ['a'], [';'], ['f'], ['j']]);
@@ -63,6 +63,30 @@ test('two mistakes reveal the hint while a correction cannot restore first-try c
   const twice = typeKey(once, { key: 'x' });
   const corrected = typeKey(twice, { key: sequence(0, 2)[0].toUpperCase() });
   assert.deepEqual([once.index, once.hint, twice.hint, corrected.index, corrected.correct, corrected.missed, corrected.hint], [0, false, true, 1, 0, false, false]);
+});
+
+test('self-test reactions match only the first real attempt at each target in both curricula', () => {
+  for (const curriculum of [lessons, singleLessons]) {
+    for (let lesson = 0; lesson < curriculum.length; lesson++) {
+      const session = startSession(lesson, 2);
+      const key = sequence(lesson, 2, curriculum)[0];
+      const correct = typeKey(session, { key }, curriculum);
+      const wrong = typeKey(session, { key: '!' }, curriculum);
+      assert.equal(firstAttemptFeedback(session, correct), 'correct');
+      assert.equal(firstAttemptFeedback(session, wrong), 'retry');
+      assert.equal(firstAttemptFeedback(wrong, typeKey(wrong, { key: '!' }, curriculum)), null);
+      assert.equal(firstAttemptFeedback(wrong, typeKey(wrong, { key }, curriculum)), null);
+      const nextKey = sequence(lesson, 2, curriculum)[correct.index];
+      assert.equal(firstAttemptFeedback(correct, typeKey(correct, { key: nextKey }, curriculum)), 'correct');
+      for (const event of [{ key, repeat: true }, { key, isComposing: true }, { key, ctrlKey: true }, { key, metaKey: true }, { key, altKey: true }, { key: 'Shift' }]) {
+        assert.equal(firstAttemptFeedback(session, typeKey(session, event, curriculum)), null);
+      }
+      for (const phase of [0, 1]) {
+        const earlier = startSession(lesson, phase);
+        assert.equal(firstAttemptFeedback(earlier, typeKey(earlier, { key: sequence(lesson, phase, curriculum)[0] }, curriculum)), null);
+      }
+    }
+  }
 });
 
 test('a corrected run records its real accuracy, permits continuation and preserves earlier mastery', () => {

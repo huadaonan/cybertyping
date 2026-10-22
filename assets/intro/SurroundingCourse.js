@@ -1,5 +1,6 @@
-import { lessons, singleLessons, sequence, startSession, typeKey, restoreProgress, completeLesson, INDEPENDENT_TARGETS, MASTERY_ACCURACY } from './surrounding.js';
+import { lessons, singleLessons, sequence, startSession, typeKey, firstAttemptFeedback, restoreProgress, completeLesson, INDEPENDENT_TARGETS, MASTERY_ACCURACY } from './surrounding.js';
 import { display, hands, handsSwitch, keyboard, trackHands } from './visuals.js';
+import { createReactions } from './reactions.js';
 
 /** Mount the home-key extension inside the existing introduction, scoped to one player. */
 export function mountSurrounding(root, playerId, { single = false, showHands = true, onHandsChange, onComplete, onContinue } = {}) {
@@ -15,12 +16,14 @@ export function mountSurrounding(root, playerId, { single = false, showHands = t
   let wrong = '';
   let storageFailed = false;
   const handAlignment = trackHands(root);
+  const reactions = createReactions();
 
   const save = () => {
     try { localStorage.setItem(storageKey, JSON.stringify(progress)); }
     catch { storageFailed = true; }
   };
   const go = (lesson, phase) => {
+    reactions.clear();
     progress = { ...progress, lesson, phase };
     session = startSession(lesson, phase);
     paused = false;
@@ -62,11 +65,17 @@ export function mountSurrounding(root, playerId, { single = false, showHands = t
         <div class="surround-progress"><progress max="${text.length}" value="${session.index}" aria-label="本步骤完成进度"></progress><span>${session.index} / ${text.length}</span></div>
         <div class="surround-target"><span class="surround-target-label">${progress.phase === 0 ? '认识这个新键' : '现在按'}</span><strong>${display(key)}</strong><p class="intro-instruction">${hint ? target ? `${area.finger}${target.direction}，按 <b>${display(key)}</b>，松开后回到 <b>${display(area.home)}</b>` : `${area.finger}在基准位置轻按 <b>${display(key)}</b>` : '试着自己找到它，慢一点也没关系。'}</p><p class="intro-note">${hint ? '回位是手指回到原处，不需要额外敲一下基准键。' : '需要帮助时，点下面的“提示”。'}</p></div>
         ${progress.phase > 0 ? `<div class="intro-sequence surround-sequence" aria-label="本步骤练习内容">${[...text].map((ch, index) => `<span class="${index < session.index ? 'done' : index === session.index ? 'current' : ''}">${display(ch)}</span>`).join('')}</div><p class="intro-note">一格一个键，格子之间不用按空格。</p>` : ''}
+        ${progress.phase === 2 ? '<div class="surround-reaction-slot" data-reaction-slot></div>' : ''}
         <div class="intro-practice surround-practice ${hint ? 'with-hands' : ''}">${hint ? `${keyboard(key, { wrong, home: area.home })}${showHands ? hands() : ''}<p class="intro-note surround-key-legend">亮色是目标键 · 虚线框是基准键 · 按提示使用对应手指</p>` : '<div class="surround-no-hint">你已经认识这些键了，自己试一小段吧。<button data-action="hint">提示</button></div>'}${paused ? '<div class="intro-overlay"><h2>休息一下也很好</h2><button class="intro-primary" data-action="resume">继续练习</button></div>' : ''}</div>
         <p class="intro-feedback" role="status" aria-live="polite">${feedback}</p>
-        <footer class="intro-controls">${progress.phase === 2 && hint ? '<button data-action="hide-hint">收起提示</button>' : ''}<button data-action="${paused ? 'resume' : 'pause'}">${paused ? '继续练习' : '暂停练习'}</button>${hint ? handsSwitch(showHands) : ''}<span>照图使用手指，系统只确认按下的键。</span></footer>
+        <footer class="intro-controls"><button data-action="previous">上一步</button>${progress.phase === 2 && hint ? '<button data-action="hide-hint">收起提示</button>' : ''}<button data-action="${paused ? 'resume' : 'pause'}">${paused ? '继续练习' : '暂停练习'}</button>${hint ? handsSwitch(showHands) : ''}<span>照图使用手指，系统只确认按下的键。</span></footer>
       `;
     })();
+    if (progress.phase === 3) root.insertAdjacentHTML('afterbegin', '<div class="surround-reaction-slot surround-reaction-summary" data-reaction-slot></div>');
+    reactions.place(root.querySelector('[data-reaction-slot]'), {
+      active: !paused && (progress.phase === 2 || progress.phase === 3),
+      idle: progress.phase === 2
+    });
     if (storageFailed) root.insertAdjacentHTML('beforeend', '<p class="intro-note" role="status">浏览器暂时无法保存进度，本次仍可继续练习。</p>');
     handAlignment.update();
   }
@@ -77,11 +86,12 @@ export function mountSurrounding(root, playerId, { single = false, showHands = t
     event.stopPropagation();
     if (button.dataset.lesson !== undefined) { go(Number(button.dataset.lesson), 0); return; }
     switch (button.dataset.action) {
+      case 'previous': go(progress.lesson, progress.phase - 1); return;
       case 'list': go(progress.lesson, -1); return;
       case 'continue': onContinue?.(); return;
       case 'hint': session.hint = true; break;
       case 'hide-hint': session.hint = false; break;
-      case 'pause': paused = true; break;
+      case 'pause': paused = true; reactions.clear(); break;
       case 'resume': paused = false; break;
       case 'hands': showHands = !showHands; onHandsChange?.(showHands); break;
       default: return;
@@ -91,10 +101,12 @@ export function mountSurrounding(root, playerId, { single = false, showHands = t
   };
   const keydown = event => {
     if (progress.phase < 0 || progress.phase > 2 || paused || event.target.closest('input,textarea,select,button,a,[contenteditable="true"]')) return;
-    if (event.key === 'Escape') { paused = true; render(); return; }
+    if (event.key === 'Escape') { paused = true; reactions.clear(); render(); return; }
     const next = typeKey(session, event, curriculum);
     if (next === session) return;
     event.preventDefault();
+    const reaction = firstAttemptFeedback(session, next);
+    if (reaction) reactions.show(reaction);
     wrong = next.index === session.index ? event.key.toLowerCase() : '';
     feedback = next.index === session.index ? '再试一次，按错不用退格。' : '对了！松开按键，再继续。';
     session = next;
@@ -107,7 +119,7 @@ export function mountSurrounding(root, playerId, { single = false, showHands = t
     render();
   };
   const blur = () => {
-    if (progress.phase >= 0 && progress.phase < 3 && !paused) { paused = true; render(); }
+    if (progress.phase >= 0 && progress.phase < 3 && !paused) { paused = true; reactions.clear(); render(); }
   };
   const visibility = () => { if (document.hidden) blur(); };
   root.addEventListener('click', click);
@@ -118,6 +130,7 @@ export function mountSurrounding(root, playerId, { single = false, showHands = t
   if (progress.phase >= 0 && progress.phase < 3) root.closest('.intro-course').scrollIntoView({ block: 'start' });
   if (progress.results.every(Boolean)) onComplete?.();
   return () => {
+    reactions.dispose();
     handAlignment.dispose();
     root.removeEventListener('click', click);
     window.removeEventListener('keydown', keydown);

@@ -55,6 +55,12 @@ export function typeKey(session, event, curriculum = lessons) {
   return { ...session, index: session.index + 1, correct: session.correct + (session.missed ? 0 : 1), missed: false, errors: 0, hint: false };
 }
 
+/** Only the first real input for each self-test target gets a reaction. */
+export function firstAttemptFeedback(session, next) {
+  if (session.phase !== 2 || next === session || session.missed || session.errors > 0) return null;
+  return next.index > session.index ? 'correct' : 'retry';
+}
+
 /** Read only validated per-player progress, never executable or arbitrary saved fields. */
 export function restoreProgress(raw, curriculum = lessons) {
   const initial = { lesson: 0, phase: -1, results: curriculum.map(() => null) };
